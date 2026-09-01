@@ -1,0 +1,13 @@
+campo,tipo_oracle,descricao,origem,regra_observacao
+codigo_municipio_6,VARCHAR2(6),Código municipal de 6 dígitos usado no SIH/SUS/TABNET,SIH/SUS,Chave natural de integração; derivar/validar IBGE 7 dígitos via tabela de correspondência
+codigo_ibge_7,VARCHAR2(7),Código IBGE do município com dígito verificador,IBGE,Usado nas dimensões territoriais
+municipio,VARCHAR2(100),Nome do município,SIH/SUS/IBGE,Padronizado em caixa alta sem acento no sample
+uf,CHAR(2),Unidade da Federação,Derivada do território,SP no piloto
+mes_referencia,DATE,Primeiro dia do mês de processamento/competência analítica,SIH/SUS,2025-01-01 a 2025-12-01
+internacoes,NUMBER,Quantidade de internações SIH/SUS por município e mês,SIH/SUS,Contagem agregada; não representa pacientes únicos
+populacao_estimada_2025,NUMBER,Estimativa populacional municipal em 1/7/2025,IBGE,Denominador para taxas por 100 mil
+internacoes_100k,NUMBER,Internações / população × 100.000,Derivada,Taxa bruta mensal
+crescimento_mom_pct,NUMBER,Variação percentual das internações em relação ao mês anterior,Derivada,Indefinida em janeiro
+desvio_mm3_pct,NUMBER,Desvio percentual da internação corrente em relação à média móvel dos 3 meses anteriores,Derivada,Começa após 3 meses
+indice_pressao,NUMBER,Média simples dos três componentes normalizados × 100,Derivada,"IPA-Piloto v1; sem leitos, permanência ou mortalidade"
+classe_pressao,VARCHAR2(30),Baixa / Moderada / Alta / Crítica,Derivada,"Faixas 0–<25, 25–<50, 50–<75, 75–100"
