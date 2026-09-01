@@ -1,0 +1,68 @@
+name: tmp-extract-sih
+
+on:
+  push:
+    branches: [tmp-rebuild-forecast]
+
+permissions:
+  contents: read
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install pandas pyarrow
+      - name: Extract official SIH counts
+        run: |
+          cat > /tmp/extract.py <<'PY'
+          import pandas as pd
+          import pyarrow.dataset as pds
+          import pyarrow.fs as fs
+
+          s3 = fs.S3FileSystem(
+              endpoint_override='https://5c499208eebced4e34bd98ffa204f2fb.r2.cloudflarestorage.com',
+              access_key='28c72d4b3e1140fa468e367ae472b522',
+              secret_key='2937b2106736e2ba64e24e92f2be4e6c312bba3355586e41ce634b14c1482951',
+              region='auto'
+          )
+
+          municipios = {
+              '351880': 'GUARULHOS',
+              '353440': 'OSASCO',
+              '354780': 'SANTO ANDRE',
+              '354870': 'SAO BERNARDO DO CAMPO',
+              '355030': 'SAO PAULO',
+          }
+
+          rows = []
+          for year in (2024, 2025):
+              for month in range(1, 13):
+                  path = f'healthbr-data/sih/rd/ano={year}/mes={month:02d}/uf=SP/'
+                  ds = pds.dataset(path, filesystem=s3, format='parquet')
+                  tab = ds.to_table(columns=['MUNIC_MOV'])
+                  s = tab.column('MUNIC_MOV').to_pandas().astype(str).str.strip().str[:6]
+                  counts = s.value_counts()
+                  for code, name in municipios.items():
+                      rows.append({
+                          'codigo_municipio_6': int(code),
+                          'municipio': name,
+                          'mes_referencia': f'{year}-{month:02d}-01',
+                          'internacoes_r2': int(counts.get(code, 0)),
+                      })
+                  print(year, month, {c:int(counts.get(c,0)) for c in municipios})
+
+          out = pd.DataFrame(rows)
+          out.to_csv('sih_sp_5municipios_2024_2025_r2.csv', index=False)
+          print(out.groupby(['municipio', out['mes_referencia'].str[:4]])['internacoes_r2'].sum())
+          PY
+          python /tmp/extract.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sih-sp-5municipios-2024-2025
+          path: sih_sp_5municipios_2024_2025_r2.csv
+          retention-days: 1
